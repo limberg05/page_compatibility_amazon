@@ -10,7 +10,7 @@ const Navbar = () => {
 
       {/* Center Section: Links */}
       <ul className="hidden md:flex space-x-12 font-light text-xl">
-        <li className="hover:text-gray-400 cursor-pointer">InicioPUTA</li>
+        <li className="hover:text-gray-400 cursor-pointer">Inicio</li>
         <li className="hover:text-gray-400 cursor-pointer">Componentes</li>
         <li className="hover:text-gray-400 cursor-pointer">Categorías</li>
         <li className="hover:text-gray-400 cursor-pointer">Pipomarico</li>
