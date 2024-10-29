@@ -1,12 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const SearchForm = ({ searchParams, setSearchParams, handleSubmit }) => {
+const SearchForm = ({ onSearch }) => {
+  const [localSearchParams, setLocalSearchParams] = useState({
+    query: '',
+    priceMin: '',
+    priceMax: '',
+    sort: 'relevance'
+  });
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setSearchParams((prevParams) => ({
+    setLocalSearchParams((prevParams) => ({
       ...prevParams,
       [name]: value,
     }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const params = {
+      ...localSearchParams,
+      priceMin: localSearchParams.priceMin ? Number(localSearchParams.priceMin) : undefined,
+      priceMax: localSearchParams.priceMax ? Number(localSearchParams.priceMax) : undefined,
+    };
+    onSearch(params);
   };
 
   return (
@@ -16,7 +33,7 @@ const SearchForm = ({ searchParams, setSearchParams, handleSubmit }) => {
         <input
           type="text"
           name="query"
-          value={searchParams.query}
+          value={localSearchParams.query}
           onChange={handleInputChange}
           placeholder="procesadores"
         />
@@ -27,7 +44,7 @@ const SearchForm = ({ searchParams, setSearchParams, handleSubmit }) => {
         <input
           type="number"
           name="priceMin"
-          value={searchParams.priceMin}
+          value={localSearchParams.priceMin}
           onChange={handleInputChange}
           placeholder="Ej: 1000"
         />
@@ -38,7 +55,7 @@ const SearchForm = ({ searchParams, setSearchParams, handleSubmit }) => {
         <input
           type="number"
           name="priceMax"
-          value={searchParams.priceMax}
+          value={localSearchParams.priceMax}
           onChange={handleInputChange}
           placeholder="Ej: 5000"
         />
@@ -48,7 +65,7 @@ const SearchForm = ({ searchParams, setSearchParams, handleSubmit }) => {
         <label>Ordenar por: </label>
         <select
           name="sort"
-          value={searchParams.sort}
+          value={localSearchParams.sort}
           onChange={handleInputChange}
         >
           <option value="relevance">Relevancia</option>
