@@ -1,14 +1,18 @@
-export const buildUrl = (searchParams) => {
-  const { category, query, priceMin, priceMax, sort } = searchParams;
-  let url = `https://api.mercadolibre.com/sites/MLM/search?category=${category}&q=${query}`;
+export const buildUrl = (params) => {
+  const baseUrl = 'https://api.mercadolibre.com/sites/MLM/search';
+  
+  // Limpiamos y validamos los parámetros de precio
+  const priceMin = params.priceMin ? parseFloat(params.priceMin) : '';
+  const priceMax = params.priceMax ? parseFloat(params.priceMax) : '';
 
-  if (priceMin || priceMax) {
-    url += `&price=${priceMin}-${priceMax || ''}`;
-  }
+  const queryParams = new URLSearchParams({
+    category: params.category || 'MLM1648',
+    q: params.query || 'procesadores',
+    // Usamos los nombres correctos de los parámetros
+    ...(priceMin && !isNaN(priceMin) && { price_min: priceMin.toString() }),
+    ...(priceMax && !isNaN(priceMax) && { price_max: priceMax.toString() }),
+    sort: params.sort || 'relevance'
+  });
 
-  if (sort) {
-    url += `&sort=${sort}`;
-  }
-
-  return url;
+  return `${baseUrl}?${queryParams.toString()}`;
 };
