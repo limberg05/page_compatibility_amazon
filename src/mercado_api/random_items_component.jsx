@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { SearchForm, buildUrl, fetchItemsFromAPI } from './';
+import debounce from 'lodash/debounce';
 
 const RandomItemsComponent = () => {
-  const [items, setItems] = useState([]); // Estado para guardar los productos
-  const [error, setError] = useState(null); // Estado para errores
-  const [loading, setLoading] = useState(false); // Estado para mostrar indicador de carga
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [banList, setBanList] = useState(
     () => JSON.parse(localStorage.getItem('banList')) || []
-  ); // Palabras baneadas desde localStorage
+  );
 
-  // Estado para los filtros de búsqueda
   const [searchParams, setSearchParams] = useState({
     category: 'MLM1648',
     query: 'procesadores',
@@ -18,85 +18,86 @@ const RandomItemsComponent = () => {
     sort: 'relevance',
   });
 
-  // Función para guardar las listas en localStorage
   const saveToLocalStorage = (list, key) => {
     localStorage.setItem(key, JSON.stringify(list));
   };
 
-  // Función para marcar un producto como no deseado y extraer las palabras clave a banear
   const markAsUndesired = (product) => {
     const title = product.title.toLowerCase();
-    const matchedKeywords = title.split(' '); // Extraemos todas las palabras del título
+    const matchedKeywords = title.split(' ');
 
     const newBanList = [...banList, ...matchedKeywords];
     setBanList(newBanList);
     saveToLocalStorage(newBanList, 'banList');
-
-    // Salida en consola para ver la lista de palabras baneadas actualizadas
-    console.log('Palabras baneadas guardadas:', newBanList);
   };
 
-  // Filtrar los productos para excluir aquellos que tengan palabras de la ban list
-  const filterProducts = useCallback(
-    (products) => {
-      return products.filter((product) => {
-        const title = product.title.toLowerCase();
-        // Excluir productos que contengan palabras de la banList
-        if (banList.some((bannedWord) => title.includes(bannedWord))) {
-          return false;
-        }
-        return true; // Si no hay palabras baneadas, mostrar el producto
-      });
-    },
-    [banList]
-  );
+  const filterProducts = useCallback((products) => {
+    return products.filter((product) => {
+      const title = product.title.toLowerCase();
+      return !banList.some((bannedWord) => title.includes(bannedWord));
+    });
+  }, [banList]);
 
-  // Función para obtener productos desde la API de Mercado Libre
-  const getRandomItems = useCallback(async () => {
+  const getRandomItems = useCallback(async (params) => {
     const accessToken = localStorage.getItem('accessToken');
-
+  
     if (!accessToken) {
       setError('No access token found. Please authenticate first.');
       setLoading(false);
       return;
     }
-
+  
     try {
       setLoading(true);
-      const url = buildUrl(searchParams); // Llamamos a buildUrl con los parámetros
-      const data = await fetchItemsFromAPI(url, accessToken); // Llamada a la API
-
-      const filteredItems = filterProducts(data.results); // Aplicamos el filtro a los productos
-
-      setItems(filteredItems); // Guardamos solo los productos filtrados
-      setError(null); // Limpiar errores
+      const url = buildUrl(params);
+      const data = await fetchItemsFromAPI(url, accessToken);
+      
+      // Aplicamos un filtro adicional para respetar los límites de precio
+      const priceFilteredItems = data.results.filter(item => {
+        const itemPrice = parseFloat(item.price);
+        const minPrice = params.priceMin ? parseFloat(params.priceMin) : -Infinity;
+        const maxPrice = params.priceMax ? parseFloat(params.priceMax) : Infinity;
+        return itemPrice >= minPrice && itemPrice <= maxPrice;
+      });
+  
+      const filteredItems = filterProducts(priceFilteredItems);
+      setItems(filteredItems);
+      setError(null);
     } catch (err) {
       setError(`Error fetching products: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  }, [searchParams, filterProducts]);
+  }, [filterProducts]);
 
-  // Manejar el envío del formulario
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    getRandomItems();
-  };
+  // Usar useMemo para crear la función debounced
+  const debouncedSearch = useMemo(
+    () => debounce((params) => {
+      getRandomItems(params);
+    }, 300),
+    [getRandomItems]
+  );
+
+  // Limpiar el debounce cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+
+  const handleSearch = useCallback((newSearchParams) => {
+    setSearchParams(newSearchParams);
+    debouncedSearch(newSearchParams);
+  }, [debouncedSearch]);
 
   useEffect(() => {
-    getRandomItems(); // Llama a la función cuando el componente se monta
-  }, [getRandomItems]);
+    debouncedSearch(searchParams);
+  }, [debouncedSearch, searchParams]);
 
   return (
     <div>
       <h1>Buscar Procesadores</h1>
-      {/* Formulario para filtros */}
-      <SearchForm
-        searchParams={searchParams}
-        setSearchParams={setSearchParams}
-        handleSubmit={handleSubmit}
-      />
-      {/* Mensajes y resultados */}
+      <SearchForm onSearch={handleSearch} />
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {loading ? (
         <p>Loading products...</p>

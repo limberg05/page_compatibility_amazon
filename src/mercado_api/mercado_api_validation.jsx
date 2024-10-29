@@ -95,12 +95,22 @@ const OAuth2Component = () => {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = generateCodeChallenge(codeVerifier);
 
-    sessionStorage.setItem('oauthState', state);
-    sessionStorage.setItem('codeVerifier', codeVerifier); // Guardar el code_verifier para su uso posterior
+    console.log('Estado de autorización:', {
+        state,
+        codeVerifier,
+        codeChallenge,
+        clientId,
+        redirectUri
+    });
 
-    const authUrl = `https://auth.mercadolibre.com.mx/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}&scope=read offline_access&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+    sessionStorage.setItem('oauthState', state);
+    sessionStorage.setItem('codeVerifier', codeVerifier);
+
+    const authUrl = `https://auth.mercadolibre.com.mx/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=read offline_access&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+    
+    console.log('URL de autorización:', authUrl);
     window.location.href = authUrl;
-  };
+};
 
   return (
     <div>
